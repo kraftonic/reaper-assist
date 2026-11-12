@@ -1,0 +1,286 @@
+import type { Mod, MouseMod, ProfileScript, Shortcut, Workflow } from "../types";
+import { reaperColors } from "../skins";
+
+/**
+ * FL Studio. Colours measured from Image-Line's manual screenshots ("Default" theme): blue-grey
+ * playlist grid, light slate track headers, slate-violet pattern clips, mint piano-roll notes
+ * that turn red when selected, a lime play line. Layout: browser docked left, transport and
+ * toolbar on top, mixer and piano roll as windows (F9 / F7). Mouse: FL's Draw tool by default,
+ * with the playlist / piano-roll tools (P B D T C E) as scripts that swap REAPER's mouse map.
+ * Mouse behaviour ids were read back from REAPER 7.82 (SetMouseModifier by name).
+ */
+
+const k = (mods: Mod[], key: string, action: Shortcut["action"], does: string, section?: Shortcut["section"]): Shortcut =>
+  section ? { mods, key, action, does, section } : { mods, key, action, does };
+const m = (ctx: string, mods: Mod[], value: string, does: string): MouseMod => ({ ctx, mods, value, does });
+
+/** FL's tools: one Lua file registered once per tool and section (the tool is read from the command id). */
+const TOOLS: [name: string, key: string, label: string][] = [
+  ["draw", "P", "Draw tool"], ["paint", "B", "Paint tool"], ["delete", "D", "Delete tool"],
+  ["mute", "T", "Mute tool"], ["slice", "C", "Slice tool"], ["select", "E", "Select tool"],
+];
+
+const scripts: ProfileScript[] = [
+  { id: "RS_assist_fl_pattern_song", file: "fl_pattern_song.lua", name: "FL: Pattern / Song mode" },
+  { id: "RS_assist_fl_place_pattern", file: "fl_place_pattern.lua", name: "FL: Place the current pattern at the mouse" },
+  { id: "RS_assist_fl_channel_rack", file: "fl_channel_rack.lua", name: "FL: Channel rack (step sequencer)" },
+  { id: "RS_assist_fl_show_playlist", file: "fl_show_playlist.lua", name: "FL: Show the playlist" },
+  { id: "RS_assist_fl_next_pattern", file: "fl_pattern_step.lua", name: "FL: Next pattern" },
+  { id: "RS_assist_fl_prev_pattern", file: "fl_pattern_step.lua", name: "FL: Previous pattern" },
+  { id: "RS_assist_fl_countin", file: "fl_countin.lua", name: "FL: Metronome count-in (precount) on/off" },
+  ...TOOLS.map(([t, , label]): ProfileScript => ({ id: `RS_assist_fl_tool_${t}`, file: "fl_tool.lua", name: `FL: ${label}` })),
+  ...TOOLS.map(([t, , label]): ProfileScript => ({ id: `RS_assist_fl_tool_${t}_midi`, file: "fl_tool.lua", name: `FL: ${label} (piano roll)`, section: "midi" })),
+];
+
+const PASS = 40401; // MIDI editor: pass the key on to the main window
+
+export const fl: Workflow = {
+  id: "fl",
+  daw: "FL Studio",
+  blurb: "Blue-grey playlist, mint piano roll, FL tools (P B D T C E); F5–F9 windows, L pattern/song.",
+  reaper: {
+    ...reaperColors({ bg: "#3f4b55", lane1: "#42545f", lane2: "#42545f", sel: "#475965", ruler: "#2b3840", rulerText: "#c0c8cc", grid: "#394b56", item: "#444466", peaks: "#cbcbed", cursor: "#7e929c", play: "#c8ff5e", note: "#c6fbd0", region: "#5f6a70", marker: "#aab4b9", text: "#e7eef2" }),
+    // FL's playlist grid, opaque (draw modes 0x02ff00): bars #1a2c37, beats #2e404b, steps #394b56 on the #42545f lanes.
+    col_gridlines2: "#1a2c37", col_gridlines3: "#2e404b", col_gridlines: "#394b56",
+    col_gridlines2dm: "#00ff02", col_gridlines3dm: "#00ff02", col_gridlines1dm: "#00ff02",
+    col_arrangebg: "#42545f", arrange_vgrid: "#3c4e59", col_tr1_divline: "#18262f", col_tr2_divline: "#18262f",
+    col_tl_bg: "#2b3840", col_tl_fg: "#c0c8cc", col_tl_fg2: "#8c9aa2", col_tl_bgsel: "#ff6f6f", col_tl_bgsel2: "#b8585a",
+    // Pattern clips: FL's indigo title strip (#444466) over a darker body (kit overlay), lavender notes, white names; selected clips turn red like FL's.
+    col_tr1_itembgsel: "#4a4a70", col_tr2_itembgsel: "#4a4a70",
+    col_mi_label: "#f1f4f7", col_mi_label_sel: "#ffffff", col_mi_label_float: "#f1f4f7", col_mi_label_float_sel: "#ffffff",
+    // Muted tracks and clips wash toward the lane colour (FL draws muted clips faded); its 60 % mode is in reaperModes.
+    mute_overlay_col: "#42545f",
+    // Piano roll: rows by key colour, mint notes (red when selected), lime cursor, white/black keys.
+    midi_trackbg1: "#42545f", midi_trackbg2: "#3b4d58", midi_trackbg_outer1: "#36464f", midi_trackbg_outer2: "#33434c",
+    midi_selpitch1: "#4b5e6a", midi_selpitch2: "#455863", midi_rulerbg: "#2a373f", midi_rulerfg: "#c0c8cc",
+    midi_grid2: "#1a2c37", midi_grid3: "#2e404b", midi_grid1: "#394b56", midioct: "#2e404b",
+    midi_griddm2: "#00ff02", midi_griddm3: "#00ff02", midi_griddm1: "#00ff02",
+    midi_editcurs: "#b8fa59", midi_leftbg: "#4e585e", midi_pkey1: "#f2f6f8", midi_pkey2: "#3a3c3f", midi_pkey3: "#9aa3a8",
+    // Controller lane selector ("Velocity"): a dark slate dropdown with light text, like FL's event editor target menu.
+    midi_ccbut: "#36444c", midi_ccbut_text: "#dde5ea", midi_ccbut_arrow: "#9fb3be",
+    midi_notebg: "#c6fbd0", midi_notefg: "#ff8a8a", midi_notemute: "#7d8a90", midi_notemute_sel: "#b07c80",
+    midi_ofsn: "#c6fbd0", midi_ofsnsel: "#ff8a8a", midifont_col_dark: "#32424c", midifont_col_light: "#ffffff",
+    // Browser lists (Media Explorer, FX browser): FL's dark list, blue-white names, orange highlight.
+    genlist_bg: "#232d33", genlist_fg: "#b8dffb", genlist_grid: "#2b353a", genlist_selbg: "#364045", genlist_selfg: "#ffffff",
+    genlist_seliabg: "#2e383d", genlist_seliafg: "#b8dffb", genlist_hilite: "#fda24e", genlist_hilite_sel: "#ffffff",
+    col_explorer_sel: "#364045", col_explorer_seledge: "#fda24e",
+    docker_selface: "#4e585e", docker_unselface: "#2b353a", docker_text: "#a7b0b4", docker_text_sel: "#ffffff",
+  },
+  // Muted / un-soloed tracks: the lane-colour wash at 60 % (0x20000 = on, bits 8–16 = opacity out of 256).
+  reaperModes: { mute_overlay_mode: 0x20000 | (0x99 << 8) },
+  panels: { track: "#586268", master: "#3e4e55", transport: "#6b757b" },
+  panel: { bg: "#3f4b55", panel: "#5a646a", panelAlt: "#6b757b", border: "#293238", text: "#e7eef2", textDim: "#aab3b8", accent: "#ffaa54", accentText: "#3a2000", accent2: "#c3ff5a" },
+  shortcuts: [
+    // Transport and record.
+    k(["cmd"], "Space", 40073, "Start / pause"),
+    k([], "R", 1013, "Record"),
+    k([], "L", "_RS_assist_fl_pattern_song", "Pattern / Song mode (loop the pattern or play the song)"),
+    k([], "Home", 40042, "Playhead to the start"),
+    k([], "Backspace", 1157, "Snap on / off (Line / none)"),
+    k(["cmd"], "P", "_RS_assist_fl_countin", "Metronome precount on / off"),
+    k(["cmd"], "T", 40637, "Typing keyboard to piano"),
+    k(["opt"], "T", 40157, "Add a time marker"),
+    k(["shift", "opt"], "T", 40256, "Set a time signature"),
+    k(["opt"], "Num*", 40173, "Next song marker"),
+    k(["opt"], "Num/", 40172, "Previous song marker"),
+    k([], "Num*", 41042, "Next bar"),
+    k([], "Num/", 41043, "Previous bar"),
+    k([], "Num+", "_RS_assist_fl_next_pattern", "Next pattern"),
+    k([], "Num-", "_RS_assist_fl_prev_pattern", "Previous pattern"),
+    // Windows.
+    k([], "F5", "_RS_assist_fl_show_playlist", "Playlist"),
+    k([], "F6", "_RS_assist_fl_channel_rack", "Channel rack / step sequencer"),
+    k([], "F7", 40153, "Piano roll (the selected pattern)"),
+    k([], "F8", 40271, "Plugin picker (REAPER's FX browser)"),
+    k(["opt"], "F8", 50124, "Browser (REAPER's Media Explorer)"),
+    k([], "F9", 40078, "Mixer"),
+    k([], "F10", 40016, "Settings"),
+    k([], "F11", 40021, "Song info / project settings"),
+    k([], "F12", 41074, "Close (hide) all windows"),
+    k(["opt"], "P", 41157, "Picker panel (REAPER's project bay)"),
+    k([], "F2", 40696, "Rename the track"),
+    // Files.
+    k(["cmd"], "N", 41895, "Save new version"),
+    k(["cmd", "shift"], "S", 40022, "Save as"),
+    k(["cmd"], "R", 40015, "Export wave file (render)"),
+    k(["cmd", "shift"], "R", 40015, "Export mp3 (render)"),
+    k(["cmd", "shift"], "M", 40849, "Export MIDI file"),
+    k(["cmd", "opt"], "Z", 40029, "Undo step by step"),
+    // Playlist editing.
+    k(["cmd"], "B", 41295, "Duplicate selection to the right"),
+    k(["cmd", "opt"], "C", 40362, "Consolidate (glue) the selected clips"),
+    k(["shift"], "C", 41611, "Select all clips by source (pattern instances)"),
+    k(["cmd"], "D", 40289, "Deselect"),
+    k(["shift"], "G", 40032, "Group selected clips"),
+    k(["opt"], "G", 40033, "Ungroup selection"),
+    k(["opt"], "M", 40719, "Mute selection"),
+    k(["opt", "shift"], "M", 40720, "Unmute selection"),
+    k([], "Insert", 40757, "Slice clip at the playhead"),
+    k(["cmd"], "Insert", 40200, "Add space (timeline selection)"),
+    k(["cmd"], "Delete", 40201, "Delete space (timeline selection)"),
+    k(["shift"], "Left", 40793, "Move selection left"),
+    k(["shift"], "Right", 40794, "Move selection right"),
+    k(["shift"], "Up", 40117, "Move selection up"),
+    k(["shift"], "Down", 40118, "Move selection down"),
+    k(["shift"], "Q", 40316, "Quantize clip start times"),
+    k([], "7", 40205, "Transpose down"),
+    k([], "8", 40204, "Transpose up"),
+    k([], "9", 41051, "Reverse (audio clips)"),
+    k([], "PageUp", 1012, "Zoom in"),
+    k([], "PageDown", 1011, "Zoom out"),
+    k(["shift"], "4", 40295, "Zoom: show all"),
+    k(["shift"], "5", 40031, "Zoom on selection"),
+    k(["shift"], "0", 40150, "Centre the playlist on the playhead"),
+    k([], "Wheel", 989, "Scroll vertically"),
+    k(["cmd"], "Wheel", 990, "Zoom horizontally"),
+    k(["shift"], "Wheel", 988, "Scroll horizontally"),
+    k(["opt"], "Wheel", 1000, "Zoom vertically"),
+    // Tools (playlist and piano roll).
+    ...TOOLS.map(([t, key, label]) => k([], key, `_RS_assist_fl_tool_${t}` as const, label)),
+    ...TOOLS.map(([t, key, label]) => k([], key, `_RS_assist_fl_tool_${t}_midi` as const, `${label} (piano roll)`, "midi")),
+    // Piano roll.
+    k(["cmd"], "Space", 40017, "Start / pause (piano roll)", "midi"),
+    k(["cmd"], "A", 40003, "Select all notes", "midi"),
+    k(["cmd"], "D", 40214, "Deselect", "midi"),
+    k(["cmd"], "B", 40882, "Duplicate selection to the right", "midi"),
+    k(["opt"], "Q", 40009, "Quantize", "midi"),
+    k(["cmd", "opt"], "Q", 40469, "Quick quantize", "midi"),
+    k(["cmd"], "Up", 40179, "Transpose an octave up", "midi"),
+    k(["cmd"], "Down", 40180, "Transpose an octave down", "midi"),
+    k(["shift"], "Up", 40177, "Move selection up", "midi"),
+    k(["shift"], "Down", 40178, "Move selection down", "midi"),
+    k(["shift"], "Left", 40183, "Move selection left", "midi"),
+    k(["shift"], "Right", 40184, "Move selection right", "midi"),
+    k(["opt"], "Left", 40181, "Nudge left", "midi"),
+    k(["opt"], "Right", 40182, "Nudge right", "midi"),
+    k(["cmd"], "L", 40405, "Quick legato", "midi"),
+    k(["cmd"], "U", 40641, "Quick chop", "midi"),
+    k(["cmd"], "G", 40456, "Glue selected notes", "midi"),
+    k(["shift"], "I", 40501, "Invert selection", "midi"),
+    k(["opt"], "M", 40057, "Mute selection", "midi"),
+    k(["opt", "shift"], "M", 40058, "Unmute selection", "midi"),
+    k(["cmd"], "E", 40481, "Step edit mode", "midi"),
+    k([], "Backspace", 1014, "Snap on / off", "midi"),
+    k([], "PageUp", 1012, "Zoom in", "midi"),
+    k([], "PageDown", 1011, "Zoom out", "midi"),
+    k(["shift"], "4", 40466, "Zoom: show all", "midi"),
+    k(["shift"], "5", 40725, "Zoom on selection", "midi"),
+    k([], "F7", 40477, "Close the piano roll", "midi"),
+    k([], "Wheel", 40432, "Scroll vertically", "midi"),
+    k(["cmd"], "Wheel", 40431, "Zoom horizontally", "midi"),
+    k(["shift"], "Wheel", 40433, "Scroll horizontally", "midi"),
+    k(["opt"], "Wheel", 999, "Change the note property (velocity) with the wheel", "midi"),
+    k(["shift", "opt"], "Wheel", 998, "Nudge notes with the wheel", "midi"),
+    // Window and transport keys work from the piano roll too.
+    ...(["R", "L", "F5", "F6", "F8", "F9", "F12", "Home", "Num+", "Num-"] as const).map((key) => k([], key, PASS, `${key} from the piano roll`, "midi")),
+    k(["opt"], "F8", PASS, "Browser from the piano roll", "midi"),
+  ],
+  // FL's Draw tool is the starting point (the tool scripts swap the slots in toolSlots).
+  mouse: [
+    m("MM_CTX_TRACK_CLK", [], "_RS_assist_fl_place_pattern", "Click an empty playlist spot: place the current pattern"),
+    m("MM_CTX_TRACK", [], "16 m", "Drag on empty space: draw a linked copy of the pattern"),
+    m("MM_CTX_TRACK", ["opt"], "17 m", "Alt-drag: the same without snap"),
+    m("MM_CTX_TRACK", ["cmd"], "9 m", "Ctrl-drag: marquee select"),
+    m("MM_CTX_ITEM", [], "13 m", "Drag a clip: move it"),
+    m("MM_CTX_ITEM", ["shift"], "39 m", "Shift-drag a clip: clone it (linked pattern copy)"),
+    m("MM_CTX_ITEM", ["opt"], "4 m", "Alt-drag a clip: move without snap"),
+    m("MM_CTX_ITEM_CLK", [], "3 m", "Click a clip: select it (the playhead stays)"),
+    m("MM_CTX_ARRANGE_RMOUSE", ["cmd"], "14 m", "Ctrl-right-drag: zoom to the area"),
+    m("MM_CTX_ARRANGE_MMOUSE", [], "2 m", "Middle-drag: pan the view"),
+    m("MM_CTX_MIDI_PIANOROLL_CLK", [], "4 m", "Click empty piano roll: add a note"),
+    m("MM_CTX_MIDI_PIANOROLL_CLK", ["opt"], "5 m", "Alt-click: add a note without snap"),
+    m("MM_CTX_MIDI_PIANOROLL", [], "12 m", "Drag on empty: add a note and move it"),
+    m("MM_CTX_MIDI_PIANOROLL", ["shift"], "14 m", "Shift-drag: add a note and resize it"),
+    m("MM_CTX_MIDI_PIANOROLL", ["opt"], "17 m", "Alt-drag: add a note without snap"),
+    m("MM_CTX_MIDI_PIANOROLL", ["cmd"], "7 m", "Ctrl-drag: marquee select notes"),
+    m("MM_CTX_MIDI_NOTE", [], "1 m", "Drag a note: move it"),
+    m("MM_CTX_MIDI_NOTE", ["shift"], "7 m", "Shift-drag a note: clone the selection"),
+    m("MM_CTX_MIDI_NOTE", ["opt"], "2 m", "Alt-drag a note: move without snap"),
+    m("MM_CTX_MIDI_NOTE", ["cmd"], "15 m", "Ctrl-drag: marquee select"),
+    m("MM_CTX_MIDI_NOTE_CLK", [], "1 m", "Click a note: select it"),
+    m("MM_CTX_MIDI_NOTE_DBLCLK", [], "40004 c", "Double-click a note: note properties"),
+    m("MM_CTX_MIDI_RMOUSE", [], "10 m", "Right-click / right-drag: delete notes"),
+    m("MM_CTX_MIDI_RMOUSE", ["shift"], "9 m", "Shift-right-drag: pan the view"),
+  ],
+  toolSlots: ["MM_CTX_TRACK_CLK", "MM_CTX_TRACK", "MM_CTX_ITEM", "MM_CTX_ITEM_CLK", "MM_CTX_MIDI_PIANOROLL_CLK", "MM_CTX_MIDI_PIANOROLL", "MM_CTX_MIDI_NOTE", "MM_CTX_MIDI_NOTE_CLK"].map((ctx) => ({ ctx, mods: [] })),
+  prefs: [
+    { key: "loop", value: 1, does: "Playback loops (repeat on) in new projects, as FL loops the pattern or song" },
+    // Bit 1 (on by default) is written too: a fresh reaper.ini has no trimmidionsplit line, and a lone bit would clear it.
+    { key: "trimmidionsplit", value: 3, bits: 3, does: "Copies of a pattern stay linked (pooled MIDI), like FL pattern instances" },
+    { key: "zoommode", value: 3, does: "Zoom around the mouse" },
+    // Look: FL's compact playlist.
+    { key: "defvzoom", value: 2, does: "New projects open with FL's default track height (56 px; zoom out for one-row tracks)" },
+    { key: "itemicons", value: 0, bits: 16511, does: "Plain clips: no lock / FX / mute / notes buttons or volume knob on them" },
+    { key: "trackitemgap", value: 0, does: "Clips fill their track: no gap between clips on adjacent tracks" },
+    { key: "labelitems2", value: 0, bits: 8, does: "Clip names inside the clip, in its title strip (like FL's pattern clips)" },
+    { key: "itemlabel_minheight", value: 12, does: "Clip names show on one-row tracks too" },
+    { key: "vgrid", value: 4100, does: "Every other group of 4 bars is shaded, like FL's playlist" },
+    { key: "griddot", value: 0, does: "Solid grid lines, like FL's playlist" },
+    { key: "gridinbg", value: 2, does: "Grid lines run under the clips (FL's clips are opaque)" },
+    { key: "textflags", value: 1, does: "Vertical mixer names read bottom-up, like FL's" },
+    { key: "transflags", value: 3, bits: 3, does: "Transport: no play-rate control and no \"[Stopped]\" text" },
+    { key: "projtimemode", value: 6, does: "The ruler counts bars (Measures.Beats minimal), like FL's timeline" },
+    { key: "projtimemode2", value: 2, does: "The time display shows bars and beats" },
+  ],
+  macros: [
+    { id: "assist_fl_delete_item", name: "FL: Delete the clip under the mouse", actions: [40528, 40006] },
+    { id: "assist_fl_mute_item", name: "FL: Mute / unmute the clip under the mouse", actions: [40528, 40175] },
+    { id: "assist_fl_clone_pattern", name: "FL: Clone pattern (duplicate and make unique)", actions: [41295, 41613] },
+  ],
+  // Start with the Draw tool lit (REAPER forgets script toggle states between sessions).
+  startup: ["_RS_assist_fl_tool_draw"],
+  scripts,
+  toolbars: [
+    {
+      section: "Main toolbar",
+      title: "Playlist tools",
+      items: [
+        { action: "_RS_assist_fl_pattern_song", label: "Pattern / Song mode (L)", icon: "assist_fl_patsong", toggle: true },
+        ...TOOLS.map(([t, key, label]) => ({ action: `_RS_assist_fl_tool_${t}` as const, label: `${label} (${key})`, icon: `assist_fl_${t}`, toggle: true })),
+        { action: 1157, label: "Snap (Backspace)", icon: "assist_fl_snap", toggle: true },
+        { action: 40364, label: "Metronome", icon: "assist_fl_metro", toggle: true },
+        { action: "_RS_assist_fl_channel_rack", label: "Channel rack (F6)", icon: "assist_fl_rack" },
+        { action: 40153, label: "Piano roll (F7)", icon: "assist_fl_piano" },
+        { action: 40271, label: "Plugin picker (F8)", icon: "assist_fl_plugin" },
+        { action: 40078, label: "Mixer (F9)", icon: "assist_fl_mixer", toggle: true },
+        { action: 50124, label: "Browser (Alt+F8)", icon: "assist_fl_browser", toggle: true },
+      ],
+    },
+    {
+      section: "MIDI piano roll toolbar",
+      title: "Piano roll tools",
+      items: [
+        ...TOOLS.map(([t, key, label]) => ({ action: `_RS_assist_fl_tool_${t}_midi` as const, label: `${label} (${key})`, icon: `assist_fl_${t}`, toggle: true })),
+        { action: "-", label: "" },
+        { action: 1014, label: "Snap (Backspace)", icon: "assist_fl_snap", toggle: true },
+        { action: 40009, label: "Quantize (Alt+Q)", icon: "assist_fl_quant" },
+        { action: 40405, label: "Quick legato (Ctrl+L)", icon: "assist_fl_legato" },
+        { action: 40641, label: "Quick chop (Ctrl+U)", icon: "assist_fl_chop" },
+        { action: 40481, label: "Step edit (Ctrl+E)", icon: "assist_fl_step", toggle: true },
+        { action: 40826, label: "Follow the selected pattern", icon: "assist_fl_linked", toggle: true },
+      ],
+    },
+  ],
+  layout: {
+    transport: "top",
+    tcp: "left",
+    tcpWidth: 340,
+    browser: { side: "left", width: 260, tabs: ["explorer", "fxbrowser"] },
+    mixer: "hidden",
+    dockHeight: 400,
+    midiEditor: "window",
+  },
+  glossary: [
+    ["Playlist", "the arrange view: patterns are MIDI items, audio clips are audio items"],
+    ["Piano roll", "the MIDI editor (F7, or double-click a pattern)"],
+    ["Pattern / pattern clip", "a MIDI item; Shift-drag or Ctrl+B copies stay linked (pooled), Make unique unpools one"],
+    ["Pattern / Song mode (L)", "loop the current pattern, or play the whole arrangement (the PAT/SONG transport button)"],
+    ["Channel rack / step sequencer", "instrument tracks; F6 opens a step grid for the selected pattern"],
+    ["Mixer insert", "the track itself (F9 shows the mixer); its FX button opens the insert's effect slots"],
+    ["Plugin picker", "the FX browser (F8)"],
+    ["Browser", "the Media Explorer (Alt+F8), docked left"],
+    ["Tools (Draw, Paint, Delete, Mute, Slice, Select)", "P B D T C E switch the mouse in the playlist and piano roll"],
+    ["Consolidate", "Glue (Ctrl+Alt+C)"],
+    ["Export → WAV", "File → Render (Ctrl+R)"],
+  ],
+};

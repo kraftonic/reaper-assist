@@ -1,0 +1,150 @@
+{
+  "name": "reaper-assist",
+  "version": "0.3.0",
+  "private": true,
+  "license": "MIT",
+  "description": "REAPER Assist: an AI side panel for music producers that drives REAPER, and DAW profiles that make REAPER look, feel and work like FL Studio, Ableton Live, Logic Pro, Pro Tools, Cubase or Studio One. Runs on macOS, Windows and Linux.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build",
+    "test:reaper": "vitest run -c vitest.reaper.config.mts",
+    "reaper:test-instance": "bash scripts/reaper-test-instance.sh",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "fflate": "^0.8.3",
+    "openai": "^7.50.0",
+    "pngjs": "^7.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "electron": "^45.2.2",
+    "electron-builder": "26.18.0",
+    "electron-vite": "^6.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  },
+  "productName": "REAPER Assist",
+  "author": {
+    "name": "Kraftonic",
+    "url": "https://github.com/kraftonic"
+  },
+  "homepage": "https://github.com/kraftonic/reaper-assist",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kraftonic/reaper-assist.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kraftonic/reaper-assist/issues"
+  },
+  "keywords": [
+    "reaper",
+    "daw",
+    "music-production",
+    "ai",
+    "electron",
+    "reascript"
+  ],
+  "build": {
+    "appId": "io.github.kraftonic.reaper-assist",
+    "productName": "REAPER Assist",
+    "artifactName": "REAPER-Assist-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**",
+      "package.json",
+      "src/daw/reaper/bridge/*.lua",
+      "src/profiles/*/scripts/**",
+      "src/ai/skills/*.md"
+    ],
+    "asarUnpack": [
+      "src/daw/reaper/bridge/*.lua",
+      "src/profiles/*/scripts/**",
+      "src/ai/skills/*.md"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.music",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Audio",
+      "maintainer": "Kraftonic <https://github.com/kraftonic/reaper-assist/issues>",
+      "synopsis": "AI side panel for REAPER"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "kraftonic",
+      "repo": "reaper-assist",
+      "releaseType": "draft"
+    }
+  }
+}

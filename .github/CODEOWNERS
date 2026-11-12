@@ -1,0 +1,15 @@
+# Who reviews what. Area owners: uncomment a line with your GitHub username or team when you take an area on.
+# Lines stay commented out until then so GitHub doesn't reject the file.
+#
+# /src/ai/                 @kraftonic/ai
+# /src/ai/skills/          @kraftonic/ai
+# /src/daw/                @kraftonic/reaper
+# /src/profiles/kit/       @kraftonic/profiles
+# /src/profiles/engine/    @kraftonic/profiles
+# /src/profiles/fl/        @fl-maintainer
+# /src/profiles/ableton/   @ableton-maintainer
+# /src/profiles/logic/     @logic-maintainer
+# /src/profiles/protools/  @protools-maintainer
+# /src/profiles/cubase/    @cubase-maintainer
+# /src/profiles/studioone/ @studioone-maintainer
+# /src/renderer/           @kraftonic/ui
