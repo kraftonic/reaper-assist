@@ -2,14 +2,15 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFil
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { WORKFLOWS, mouseSlot, profileKbLines, profileTouches, type Workflow } from "@profiles";
+import { WORKFLOWS, hostKeyOs, mouseSlot, profileKbLines, profileTouches, type Workflow } from "@profiles";
 import { REAPER_DEFAULTS, applyPrefs, layoutIni, menuSections, mouseValues, setMenuSections, setMouseValues, toolbarLines } from "@profiles/engine/files";
 import { installProfile } from "@profiles/engine/install";
 import { defaultsOriginal, ensureOriginal, restoreFiles } from "@profiles/engine/restore";
 
 describe("reaper-mouse.ini", () => {
   it("creates the file the way REAPER does and keeps it sparse", () => {
-    const t = setMouseValues(null, { "MM_CTX_MIDI_RMOUSE\t0": "10 m" });
+    // New files use the OS's line ending (CRLF on Windows).
+    const t = setMouseValues(null, { "MM_CTX_MIDI_RMOUSE\t0": "10 m" }).replace(/\r\n/g, "\n");
     expect(t).toMatch(/^\[hasimported\]\nMM_CTX_ARRANGE_MMOUSE=1\n/);
     expect(t).toContain("[MM_CTX_MIDI_RMOUSE]\nmm_0=10 m");
     expect(mouseValues(t, ["MM_CTX_MIDI_RMOUSE\t0", "MM_CTX_ITEM\t2"])).toEqual({ "MM_CTX_MIDI_RMOUSE\t0": "10 m", "MM_CTX_ITEM\t2": null });
@@ -168,8 +169,8 @@ describe("installing and restoring a profile", () => {
     expect(read("reaper.ini")).toContain("lastthemefn5=/x/Assist - A.ReaperThemeZip");
     expect(read("reaper.ini")).toContain("viewadvance=23");
     expect(read("reaper.ini")).toContain("mixerflag=34");
-    expect(read("reaper-kb.ini")).toContain(profileKbLines(TEST_A, "mac").join("\r\n"));
-    expect(read("reaper-kb.ini")).toContain("KEY 8 61 40078 0");
+    expect(read("reaper-kb.ini")).toContain(profileKbLines(TEST_A, hostKeyOs()).join("\r\n"));
+    expect(read("reaper-kb.ini")).toContain(hostKeyOs() === "win" ? "KEY 9 187 40078 0" : "KEY 8 61 40078 0");
     expect(read("reaper-kb.ini")).toContain("KEY 1 75 _RS_assist_test_tool 0");
     expect(read("reaper-kb.ini")).not.toContain("KEY 1 75 40044 0"); // replaced by ours for now
     expect(read("reaper-mouse.ini")).toContain("[MM_CTX_MIDI_RMOUSE]\nmm_0=10 m");

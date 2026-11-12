@@ -59,7 +59,7 @@ describe("Restore REAPER: layout", () => {
       .replace("actions=0.3 2", "actions=0.3 2\r\nexplorer=0.1 3\r\nfxbrowser=0.2 3")
       .replace("docked=1\r\n", `docked=1\r\nNbShortcuts=3\r\nShortcut0=/Lib/Kitroom\r\nShortcutT0=Kitroom\r\nShortcut1=${HOME}/Music\r\nShortcutT1=Music\r\nShortcut2=/\r\nShortcutT2=/\r\n`);
     const o = fallbackOriginal(changed, null, null, "/R/ColorThemes/Default_7.0.ReaperThemeZip", "/R", new Date(), ["/Lib/Kitroom", `${HOME}/Music`]);
-    const back = restoreIni(changed, o, { home: HOME });
+    const back = restoreIni(changed, o, { home: HOME, os: "darwin" }); // REAPER's default list is known on macOS
     const r = keys(back, "reaper")!;
     expect(r).toMatchObject({ lastthemefn5: "/R/ColorThemes/Default_7.0.ReaperThemeZip", mixerflag: "4", fxadd_vis: "0" });
     expect(r.transport_dock_pos).toBeUndefined();

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { buildThemeZip, logfontHex, setThemeReaperKeys, themeFontLines } from "@profiles/engine/theme";
@@ -7,11 +7,12 @@ import { KITS } from "@profiles/kit";
 import { skinFromWorkflow } from "@profiles/skins";
 import { WORKFLOWS } from "@profiles";
 
+// REAPER's own Default 7 theme; tests that compare against it skip where REAPER isn't installed (CI).
 const BASE = "/Applications/REAPER.app/Contents/InstallFiles/ColorThemes/Default_7.0.ReaperThemeZip";
 const baseIni = () => Buffer.from(unzipSync(new Uint8Array(readFileSync(BASE)))["Default_7.0_unpacked.ReaperTheme"]!).toString("latin1");
 
 describe("theme fonts", () => {
-  it("writes LOGFONTs the way REAPER does (checked against Default 7)", () => {
+  it.runIf(existsSync(BASE))("writes LOGFONTs the way REAPER does (checked against Default 7)", () => {
     const line = /^lb_font=([0-9A-F]+)/m.exec(baseIni())![1]!;
     const bytes = line.match(/../g)!.map((h) => parseInt(h, 16));
     // REAPER's checksum: the 60 bytes' sum mod 256.
@@ -62,7 +63,7 @@ describe("kit globals", () => {
 });
 
 describe("raw theme modes", () => {
-  it("writes a profile's reaperModes into [color theme] as raw integers", () => {
+  it.runIf(existsSync(BASE))("writes a profile's reaperModes into [color theme] as raw integers", () => {
     const w = { ...WORKFLOWS.find((x) => x.id === "protools")!, reaperModes: { mute_overlay_mode: 0x20000 | (0x40 << 8), inactive_take_overlay_mode: 0x20000 } };
     const zip = buildThemeZip(new Uint8Array(readFileSync(BASE)), skinFromWorkflow(w, true));
     const files = unzipSync(zip);

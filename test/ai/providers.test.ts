@@ -149,6 +149,8 @@ describe("OpenAI-compatible: image inputs", () => {
 
 /* ------------------------------------------------------------ fake CLIs */
 
+// The fake CLIs are #! scripts, which Windows can't start directly (the CLI providers are a dev-only feature).
+const fakeCliOk = process.platform !== "win32";
 const bin = mkdtempSync(join(tmpdir(), "ka-fakecli-"));
 const node = `#!${process.execPath}\n`;
 
@@ -216,7 +218,7 @@ afterEach(() => {
   setCliBinary("codex", null);
 });
 
-describe("Claude Code CLI: images via stream-json input", () => {
+describe.runIf(fakeCliOk)("Claude Code CLI: images via stream-json input", () => {
   it("sends one stream-json user message with image blocks and closes input after the result", async () => {
     fake("claude", FAKE_CLAUDE);
     const r = cliRun({ images: [{ path: imgPath, mime: "image/png" }] });
@@ -245,7 +247,7 @@ describe("Claude Code CLI: images via stream-json input", () => {
   });
 });
 
-describe("Codex CLI: images via -i", () => {
+describe.runIf(fakeCliOk)("Codex CLI: images via -i", () => {
   it("attaches each image with -i before the other flags, relative to its working folder", async () => {
     fake("codex", FAKE_CODEX);
     const r = cliRun({ images: [{ path: imgPath, mime: "image/png" }, { path: imgPath, mime: "image/png" }] });
@@ -428,7 +430,7 @@ describe("web access: CLI flags", () => {
     }
   });
 
-  it("passes the setting through to the real runners", async () => {
+  it.runIf(fakeCliOk)("passes the setting through to the real runners", async () => {
     fake("claude", FAKE_CLAUDE);
     const r = cliRun({ web: true });
     await runClaudeCli(r.o);

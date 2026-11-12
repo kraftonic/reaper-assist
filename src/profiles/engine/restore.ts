@@ -169,7 +169,7 @@ export function defaultsOriginal(o: ReaperOriginal, defaultTheme: string | null)
 }
 
 /** Put the recorded reaper.ini values back. Everything else in the file is kept. */
-export function restoreIni(text: string, o: ReaperOriginal, opts: { keepTheme?: boolean; home?: string } = {}): string {
+export function restoreIni(text: string, o: ReaperOriginal, opts: { keepTheme?: boolean; home?: string; os?: NodeJS.Platform } = {}): string {
   const doc = parse(text);
   // dockermodeN / dockerselN: only the docker(s) Assist's browser sits in; other dockers are the user's.
   const pref = find(doc, "REAPERdockpref");
@@ -221,7 +221,7 @@ export function restoreIni(text: string, o: ReaperOriginal, opts: { keepTheme?: 
     let keep = now.filter((f) => original.has(norm(f.path)) || !added.has(norm(f.path)));
     if (keep.length !== now.length) {
       // A list REAPER never saved means REAPER shows its defaults: go back to that if only those are left.
-      const defaults = new Set(DEFAULT_SHORTCUTS(opts.home).map((d) => norm(d.path)));
+      const defaults = new Set(DEFAULT_SHORTCUTS(opts.home, opts.os).map((d) => norm(d.path)));
       if (o.ini[id("reaper_sexplorer", "NbShortcuts")] === null && keep.every((f) => defaults.has(norm(f.path)))) keep = [];
       mx.lines = mx.lines.filter((l) => !l.key || !LIST_KEY.test(l.key));
       if (keep.length) {

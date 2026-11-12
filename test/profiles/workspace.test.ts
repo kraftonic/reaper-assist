@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SHORTCUTS, workspaceIni, type WorkspacePlan } from "@profiles/engine/workspace";
 
@@ -25,7 +26,7 @@ describe("browser + mixer workspace (reaper.ini)", () => {
     expect(mx).toMatchObject({ docked: "1", visible: "1", lastdir: "/Lib/Kitroom", Shortcut0: "/Lib/Kitroom", ShortcutT0: "Kitroom", Shortcut1: `${HOME}/Music` });
     // A new list keeps REAPER's own default shortcuts after ours.
     expect(Number(mx.NbShortcuts)).toBe(7);
-    expect(mx.Shortcut6).toBe(`${HOME}/Documents`);
+    expect(mx.Shortcut6).toBe(join(HOME, "Documents"));
   });
 
   it("transport on top, track headers on the right, MIDI editor docked", () => {
